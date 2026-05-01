@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lucy & the AI Agent — Speculative Design Storyboard</title>
+
+<!--
+================================================================
+  STORYBOARD STRUCTURE
+================================================================
+  This storyboard has 4 tabs at the top:
+
+    1. Introduction   (panels: Setup, Background)
+    2. Scenario 1     (panels: Need ID, Search, Results, Decision)
+    3. Scenario 2     (panels: Need ID, Search, Results, Decision)
+    4. Scenario 3     (panels: Need ID, Search, Results, Decision)
+
+  All four tabs are driven by a single TABS array near the bottom
+  of the script (search for "TABS DATA"). Each tab has its own
+  clickable timeline showing its panels.
+
+  PANEL TYPES:
+    "setup"       — welcome text + speed slider + sample button
+    "background"  — illustration on top, descriptive text below
+    "chat"        — pure chat UI; bubbles appear progressively
+
+  CHAT DIALOGUE FORMAT:
+    { speaker: "Lucy" | "Agent" | "Stage", text: "...", speech?: "..." }
+      - Lucy / Agent are spoken aloud (Lucy = default female voice;
+        Agent = Google US English, fixed)
+      - Stage is shown as italic centered cue, NOT spoken aloud
+      - text supports HTML: <ul>, <li>, <strong>, <p>
+      - speech is an optional plain-text TTS override (use when
+        bullet lists need to be narrated as natural prose)
+
+  SWAPPING THE BACKGROUND IMAGE:
+    The background panel renders an illustration. Two options:
+
+    Option A — use a raster image (PNG/JPG):
+      In the Introduction tab's background panel data, change:
+        illustration: "hand_tremor"
+      to:
+        imageUrl: "lucy-background.png"   (or full URL)
+      Then place the image file next to this HTML file (or use
+      a hosted URL).
+
+    Option B — replace the SVG:
+      Edit the `hand_tremor` function inside ILLUSTRATIONS below
+      and paste in your new SVG markup.
+
+  PLAYBACK BEHAVIOR:
+    - Each panel waits for Next press before moving on
+      (no auto-advance).
+    - Panel state is preserved when navigating away and back.
+    - Replay restarts the current panel from the beginning.
+
+  HOSTING & EMBEDDING:
+    Host this single HTML file on GitHub Pages or Netlify, then
+    embed via iframe in Qualtrics. README has instructions.
+================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..700&family=DM+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --cream:        #f6f1e7;
+  --cream-deep:   #ece4d3;
+  --paper:        #fdfaf3;
+  --ink:          #2a2620;
+  --ink-soft:     #5b5448;
+  --bronze:       #8a6f4a;
+  --sage:         #4a7c59;
+  --sage-deep:    #325c40;
+  --gold:         #c89b3c;
+
+  --lucy-bg:      #1e3a5f;
+  --lucy-text:    #ffffff;
+  --agent-bg:     #ececec;
+  --agent-text:   #1a1a1a;
+
+  --shadow:       rgba(42, 38, 32, 0.08);
+  --shadow-lg:    rgba(42, 38, 32, 0.16);
+
+  --serif:        'Fraunces', 'Cambria', 'Georgia', serif;
+  --sans:         'Source Sans 3', system-ui, sans-serif;
+  --mono:         'DM Mono', ui-monospace, 'SF Mono', monospace;
+
+  --radius:       18px;
+  --radius-sm:    12px;
+  --radius-bubble:20px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(200, 155, 60, 0.08), transparent 45%),
+    radial-gradient(circle at 88% 92%, rgba(74, 124, 89, 0.07), transparent 50%),
+    var(--cream);
+  min-height: 100vh;
+  padding: 0 0 140px 0;
+}
+
+/* ===========================================
+   HEADER + TABS
+   =========================================== */
+header {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 48px 32px 0 32px;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--bronze);
+  margin: 0 0 14px 0;
+}
+
+h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(32px, 4vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px 0;
+  font-style: italic;
+}
+h1 em { font-style: normal; font-weight: 600; }
+
+.subhead {
+  font-size: 17px;
+  color: var(--ink-soft);
+  max-width: 640px;
+  margin: 0 0 28px 0;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid var(--cream-deep);
+  margin-top: 12px;
+}
+
+.tab {
+  padding: 14px 22px;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-weight: 500;
+}
+.tab:hover { color: var(--ink); }
+.tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* ===========================================
+   MAIN
+   =========================================== */
+main {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+/* ===========================================
+   TIMELINE
+   =========================================== */
+.timeline {
+  margin: 4px 0 32px 0;
+  padding: 0 14px;
+}
+
+.timeline-track {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.timeline-line, .timeline-line-fill {
+  position: absolute;
+  top: 14px;
+  height: 2px;
+  border-radius: 2px;
+}
+.timeline-line {
+  left: 14px; right: 14px;
+  background: var(--cream-deep);
+  z-index: 0;
+}
+.timeline-line-fill {
+  left: 14px;
+  background: var(--sage);
+  z-index: 1;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.timeline-step {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  min-width: 0;
+}
+
+.timeline-dot {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--cream-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  transition: all 0.22s ease;
+  font-weight: 500;
+}
+.timeline-step.completed .timeline-dot {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: var(--paper);
+}
+.timeline-step.current .timeline-dot {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  box-shadow: 0 0 0 5px rgba(74, 124, 89, 0.18);
+  transform: scale(1.06);
+}
+.timeline-step:hover:not(.current) .timeline-dot {
+  transform: scale(1.12);
+  border-color: var(--bronze);
+}
+
+.timeline-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 10px;
+  text-align: center;
+  max-width: 110px;
+  line-height: 1.35;
+  word-wrap: break-word;
+}
+.timeline-step.current .timeline-label {
+  color: var(--ink);
+  font-weight: 500;
+}
+.timeline-step.completed .timeline-label {
+  color: var(--sage-deep);
+}
+
+/* ===========================================
+   SCENARIO INTRO + PANEL
+   =========================================== */
+.scenario-intro {
+  background: var(--paper);
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.scenario-intro h2 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 22px;
+  margin: 0 0 8px 0;
+  font-style: italic;
+}
+.scenario-intro p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 16px;
+}
+
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 20px var(--shadow);
+  position: relative;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--cream-deep);
+  background: linear-gradient(to bottom, var(--cream-deep), var(--paper));
+}
+.stage-label {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--bronze);
+}
+.panel-counter {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.panel-counter strong { color: var(--ink); font-weight: 500; }
+
+/* ===========================================
+   SETUP PANEL
+   =========================================== */
+.setup-body { padding: 36px 40px 40px 40px; }
+
+.setup-welcome {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0 0 28px 0;
+}
+
+.setup-section { margin: 24px 0; }
+
+.setup-section-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  margin: 0 0 10px 0;
+  display: block;
+}
+
+.setup-range {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 16px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--cream-deep);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 44px;
+}
+.setup-range:focus { outline: none; border-color: var(--sage); }
+
+.setup-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px;
+  background: var(--sage);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid var(--paper);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+.setup-range::-moz-range-thumb {
+  width: 22px; height: 22px;
+  background: var(--sage);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid var(--paper);
+}
+
+.setup-rate-row { display: flex; align-items: center; gap: 14px; }
+.setup-rate-row .setup-range { flex: 1; }
+.setup-rate-display {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--ink);
+  width: 56px;
+  text-align: right;
+}
+
+.setup-test {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.setup-test-btn {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 12px 22px;
+  background: var(--sage);
+  color: var(--paper);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.18s ease;
+}
+.setup-test-btn:hover { background: var(--sage-deep); }
+.setup-test-btn svg { width: 16px; height: 16px; }
+
+.setup-divider {
+  border: none;
+  border-top: 1px solid var(--cream-deep);
+  margin: 32px 0 24px 0;
+}
+.setup-howto {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.setup-howto strong { color: var(--ink); font-weight: 600; }
+.setup-cta {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: var(--cream-deep);
+  border-radius: var(--radius-sm);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink);
+  text-align: center;
+}
+
+/* ===========================================
+   BACKGROUND PANEL
+   =========================================== */
+.background-illustration {
+  width: 100%;
+  height: 380px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.background-illustration.has-svg {
+  background: linear-gradient(135deg, #f3ebd8 0%, #ebe0c8 100%);
+}
+.background-illustration svg { width: 100%; height: 100%; max-width: 100%; }
+.background-illustration img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.background-text {
+  padding: 32px 40px;
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.7;
+  color: var(--ink);
+  transition: opacity 0.4s ease;
+  opacity: 0.55;
+}
+.background-text.spoken, .background-text.active { opacity: 1; }
+.background-text.active {
+  background: linear-gradient(90deg, rgba(200, 155, 60, 0.06), transparent);
+}
+
+/* ===========================================
+   CHAT PANEL
+   =========================================== */
+.chat-body {
+  padding: 28px 24px;
+  background: linear-gradient(to bottom, var(--paper) 0%, #f7f2e6 100%);
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chat-empty-hint {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  text-align: center;
+  padding: 80px 20px;
+  opacity: 0.7;
+}
+
+.chat-row {
+  display: flex;
+  width: 100%;
+  animation: bubble-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.chat-row.no-anim { animation: none; }
+.chat-row.lucy  { justify-content: flex-end; }
+.chat-row.agent { justify-content: flex-start; }
+.chat-row.stage { justify-content: center; }
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.chat-bubble {
+  max-width: 76%;
+  padding: 12px 18px;
+  border-radius: var(--radius-bubble);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.5;
+  position: relative;
+  word-wrap: break-word;
+  transition: box-shadow 0.25s ease;
+}
+.chat-row.lucy .chat-bubble {
+  background: var(--lucy-bg);
+  color: var(--lucy-text);
+  border-bottom-right-radius: 6px;
+}
+.chat-row.agent .chat-bubble {
+  background: var(--agent-bg);
+  color: var(--agent-text);
+  border-bottom-left-radius: 6px;
+}
+.chat-row.stage .chat-bubble {
+  background: transparent;
+  color: var(--bronze);
+  font-style: italic;
+  font-family: var(--serif);
+  font-size: 15px;
+  padding: 6px 0;
+  text-align: center;
+  max-width: 100%;
+}
+.chat-row.active .chat-bubble {
+  box-shadow: 0 0 0 3px rgba(200, 155, 60, 0.4);
+}
+
+.chat-bubble ul { margin: 8px 0 4px 0; padding-left: 22px; }
+.chat-bubble li { margin: 4px 0; }
+.chat-bubble strong { font-weight: 600; }
+.chat-bubble p { margin: 0 0 8px 0; }
+.chat-bubble p:last-child { margin-bottom: 0; }
+
+.chat-speaker {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0 12px 4px 12px;
+  display: block;
+  color: var(--ink-soft);
+}
+.chat-row.lucy  .chat-speaker { text-align: right; color: var(--lucy-bg); }
+.chat-row.agent .chat-speaker { text-align: left;  color: #555; }
+
+.chat-msg-wrap {
+  display: flex;
+  flex-direction: column;
+  max-width: 76%;
+}
+.chat-row.lucy .chat-msg-wrap { align-items: flex-end; }
+.chat-row.agent .chat-msg-wrap { align-items: flex-start; }
+.chat-msg-wrap .chat-bubble { max-width: 100%; }
+
+/* ===========================================
+   CONTROLS
+   =========================================== */
+.controls {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(253, 250, 243, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--cream-deep);
+  padding: 16px 24px;
+  z-index: 100;
+}
+.controls-inner {
+  max-width: 920px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--cream-deep);
+  border-radius: 999px;
+  padding: 10px 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.18s ease;
+  min-height: 42px;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--bronze);
+  background: var(--cream-deep);
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  padding: 12px 24px;
+  font-size: 14px;
+}
+.btn.primary:hover:not(:disabled) {
+  background: var(--sage-deep);
+  border-color: var(--sage-deep);
+}
+.btn svg { width: 14px; height: 14px; }
+
+.spacer { flex: 1; }
+
+.settings {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.settings input[type="range"] { width: 110px; accent-color: var(--sage); }
+
+footer {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 32px 32px 32px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  header, main { padding-left: 18px; padding-right: 18px; }
+  .setup-body, .background-text { padding-left: 24px; padding-right: 24px; }
+  .chat-bubble { font-size: 16px; padding: 11px 15px; }
+  .background-illustration { height: 240px; }
+  .settings { width: 100%; justify-content: space-between; }
+  .timeline-label { font-size: 9px; max-width: 60px; }
+  .timeline-dot { width: 26px; height: 26px; font-size: 11px; }
+  .tab { padding: 12px 14px; font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Speculative Design Study · Storyboard</p>
+  <h1>Lucy &amp; <em>the AI Agent</em></h1>
+  <p class="subhead">
+    Use the tabs below to navigate between the introduction and three scenarios.
+    Each tab has its own timeline you can click to jump between panels.
+  </p>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <div class="timeline" id="timeline"></div>
+  <div id="scenarioIntroSlot"></div>
+  <div class="panel" id="panel">
+    <div class="panel-header">
+      <span class="stage-label" id="stageLabel">—</span>
+      <span class="panel-counter">Panel <strong id="panelNum">1</strong> of <strong id="panelTotal">1</strong></span>
+    </div>
+    <div id="panelBody"></div>
+  </div>
+</main>
+
+<footer>
+  <p>Tip — adjust the speech rate slider for slower, clearer narration.</p>
+</footer>
+
+<div class="controls">
+  <div class="controls-inner">
+    <button class="btn" id="prevBtn" title="Previous panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Prev
+    </button>
+    <button class="btn primary" id="playBtn" title="Play / Pause">
+      <span id="playIcon"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+      <span id="playLabel">Play</span>
+    </button>
+    <button class="btn" id="replayBtn" title="Replay this panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      Replay
+    </button>
+    <button class="btn" id="nextBtn" title="Next panel">
+      Next
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div class="spacer"></div>
+    <div class="settings">
+      <label>
+        Speed
+        <input type="range" id="rateSlider" min="0.6" max="1.4" step="0.1" value="0.9" />
+        <span id="rateValue">0.9×</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   ILLUSTRATIONS  (used by background panels)
+   =====================================================================
+   To swap in a raster image, see "SWAPPING THE BACKGROUND IMAGE" in
+   the comment block at the top of this file.
+   ===================================================================== */
+const ILLUSTRATIONS = {
+  hand_tremor: () => `
+    <svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="warmlight" cx="0.7" cy="0.3" r="0.8">
+          <stop offset="0%" stop-color="#fce9c4" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#ebe0c8" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="600" height="320" fill="url(#warmlight)"/>
+      <rect x="380" y="40" width="160" height="180" fill="#fdfaf3" stroke="#8a6f4a" stroke-width="2"/>
+      <line x1="460" y1="40" x2="460" y2="220" stroke="#8a6f4a" stroke-width="2"/>
+      <line x1="380" y1="130" x2="540" y2="130" stroke="#8a6f4a" stroke-width="2"/>
+      <circle cx="500" cy="90" r="22" fill="#f4c97a" opacity="0.7"/>
+      <path d="M 100 220 Q 100 150 160 150 L 240 150 Q 280 150 280 220 Z" fill="#b25c5c" opacity="0.85"/>
+      <ellipse cx="190" cy="135" rx="32" ry="38" fill="#e8c8a8"/>
+      <ellipse cx="190" cy="105" rx="36" ry="22" fill="#d4d4d4"/>
+      <ellipse cx="190" cy="98" rx="14" ry="10" fill="#c4c4c4"/>
+      <circle cx="178" cy="138" r="6" fill="none" stroke="#2a2620" stroke-width="1.5"/>
+      <circle cx="202" cy="138" r="6" fill="none" stroke="#2a2620" stroke-width="1.5"/>
+      <line x1="184" y1="138" x2="196" y2="138" stroke="#2a2620" stroke-width="1.5"/>
+      <path d="M 182 152 Q 190 156 198 152" stroke="#5b5448" stroke-width="1.5" fill="none"/>
+      <path d="M 150 175 Q 150 240 175 275 L 230 275 Q 240 240 230 175 Z" fill="#f3dfdf"/>
+      <path d="M 230 200 Q 280 210 330 220" stroke="#e8c8a8" stroke-width="22" fill="none" stroke-linecap="round"/>
+      <ellipse cx="345" cy="222" rx="18" ry="14" fill="#e8c8a8"/>
+      <g stroke="#b25c5c" stroke-width="1.5" fill="none" opacity="0.7">
+        <path d="M 370 210 q 4 -3 8 0"/>
+        <path d="M 372 220 q 4 -3 8 0"/>
+        <path d="M 370 232 q 4 -3 8 0"/>
+        <path d="M 380 215 q 4 -3 8 0"/>
+        <path d="M 380 225 q 4 -3 8 0"/>
+      </g>
+      <line x1="0" y1="290" x2="600" y2="290" stroke="#8a6f4a" stroke-width="1" opacity="0.3"/>
+    </svg>
+  `
+};
+
+
+/* =====================================================================
+   TABS DATA  ←  EDIT HERE TO MODIFY CONTENT
+   =====================================================================
+   Each tab has:
+     id       — short identifier used internally
+     title    — label shown in the top tab bar
+     summary  — (optional) small intro card shown above the panel
+     panels   — array of panels
+   ===================================================================== */
+const TABS = [
+
+  /* =========================================================
+     TAB 1 — INTRODUCTION
+     ========================================================= */
+  {
+    id: "intro",
+    title: "Introduction",
+    summary: null, // No intro card for this tab
+    panels: [
+
+      // ─── Panel 1: Setup ─────────────────────────────────────
+      {
+        type: "setup",
+        stage: "Welcome & setup",
+        shortLabel: "Setup",
+        body: "Thank you for participating in this study! This page aims to help you personalize this storyboard. Please select your preferred speed."
+      },
+
+      // ─── Panel 2: Background ───────────────────────────────
+      // To swap the image: change `imageUrl` below to a different
+      // path or hosted URL, OR set `illustration: "hand_tremor"`
+      // (and remove imageUrl) to use the inline SVG instead.
+      {
+        type: "background",
+        stage: "Background",
+        shortLabel: "Background",
+        imageUrl: "lucy-background.png",
+        body: "Lucy is 73 years old. She has been taking two medicines for depression — bupropion and escitalopram — for some time. Over the past few weeks, she has noticed a tremor (shaking) in her fingers that is getting worse. She wants to see a doctor about it and asks her AI agent to help find one."
+      }
+    ]
+  },
+
+  /* =========================================================
+     TAB 2 — SCENARIO 1: SERVANT
+     ========================================================= */
+  {
+    id: "s1",
+    title: "Scenario 1",
+    summary: {
+      heading: "Scenario 1 · Servant (Low automation)",
+      body: "The Servant agent helps Lucy find what she asked for. It asks clarifying questions, presents balanced information, and keeps Lucy in the driver's seat at every step."
+    },
+    panels: [
+
+      // ─── Need identification ────────────────────────────────
+      {
+        type: "chat",
+        stage: "Need identification",
+        shortLabel: "Need ID",
+        dialogue: [
+          { speaker: "Lucy",  text: "I've had some shaking in my fingers, and it's been getting worse. Can you help me find a doctor to look at it?" },
+          { speaker: "Agent", text: "I'm sorry to hear that, Lucy. I can help you find a doctor. To make the search useful, may I ask two quick questions? First, is there a hospital or clinic you would prefer? And second, how soon would you like to be seen?" }
+        ]
+      },
+
+      // ─── Search execution ───────────────────────────────────
+      {
+        type: "chat",
+        stage: "Search execution",
+        shortLabel: "Search",
+        dialogue: [
+          { speaker: "Lucy",  text: "I'd like the earliest appointment I can get. I'd prefer Northside Hospital if possible. I've been there before." },
+          { speaker: "Agent", text: "Got it. Here is the search I plan to run: doctors who can evaluate finger tremor, sorted by earliest appointment, with Northside Hospital highlighted." },
+          { speaker: "Agent", text: "Just so you know, you can change this query, narrow the search, or stop it at any time. Should I go ahead?" },
+          { speaker: "Lucy",  text: "Yes, please go ahead." },
+          { speaker: "Agent", text: "Searching now. One moment." },
+          { speaker: "Stage", text: "(the agent searches)" }
+        ]
+      },
+
+      // ─── Result synthesis ───────────────────────────────────
+      {
+        type: "chat",
+        stage: "Result synthesis",
+        shortLabel: "Results",
+        dialogue: [
+          {
+            speaker: "Agent",
+            text: `<p>Here are the results, Lucy. I sorted them by the earliest available appointment, and I put a star next to the ones at Northside Hospital.</p>
+                   <ul>
+                     <li>⭐ <strong>Dr. Patel</strong>, Neurology — Northside Hospital — next available: Thursday, May 1</li>
+                     <li><strong>Dr. Kim</strong>, Neurology — Riverside Clinic — next available: Friday, May 2</li>
+                     <li>⭐ <strong>Dr. Alvarez</strong>, Internal Medicine — Northside Hospital — next available: Monday, May 5</li>
+                     <li><strong>Dr. Nguyen</strong>, Neurology — Hospital Y — next available: Wednesday, May 14</li>
+                   </ul>`,
+            speech: "Here are the results, Lucy. I sorted them by the earliest available appointment, and I put a star next to the ones at Northside Hospital. Dr. Patel in neurology at Northside is available Thursday May first. Dr. Kim at Riverside Clinic, Friday May second. Dr. Alvarez in internal medicine at Northside, Monday May fifth. And Dr. Nguyen in neurology at Hospital Y, Wednesday May fourteenth."
+          },
+          {
+            speaker: "Agent",
+            text: `<p>Because health decisions matter, I also looked at what other patients have said. I checked Yelp reviews for each clinic so you have a fuller picture before you choose:</p>
+                   <ul>
+                     <li><strong>Northside Hospital (Dr. Patel):</strong> 3.2 stars on Yelp. Some patients said wait times were long.</li>
+                     <li><strong>Riverside Clinic (Dr. Kim):</strong> 3.8 stars on Yelp.</li>
+                     <li><strong>Hospital Y (Dr. Nguyen):</strong> 5 stars on Yelp. Many older patients said she took time to listen and explain things clearly. The opening is about two weeks later.</li>
+                   </ul>`,
+            speech: "Because health decisions matter, I also looked at what other patients have said. I checked Yelp reviews for each clinic so you have a fuller picture before you choose. Northside Hospital, where Dr. Patel works, has 3.2 stars on Yelp; some patients said wait times were long. Riverside Clinic has 3.8 stars. Hospital Y, where Dr. Nguyen works, has 5 stars. Many older patients said she took time to listen and explain things clearly. Her opening is about two weeks later."
+          },
+          {
+            speaker: "Agent",
+            text: "I want you to have all the information. The earliest opening is at Northside, but Hospital Y has the strongest patient reviews. The choice is yours."
+          }
+        ]
+      },
+
+      // ─── Information use ────────────────────────────────────
+      {
+        type: "chat",
+        stage: "Information use",
+        shortLabel: "Decision",
+        dialogue: [
+          { speaker: "Lucy",  text: "That's helpful. The reviews matter to me. I think I'll wait the extra two weeks and book with Dr. Nguyen at Hospital Y." },
+          { speaker: "Agent", text: "A thoughtful choice. Here is the booking link for Dr. Nguyen at Hospital Y. Would you like me to add the appointment to your calendar once it's confirmed?" },
+          { speaker: "Lucy",  text: "Yes, please." }
+        ]
+      }
+    ]
+  },
+
+  /* =========================================================
+     TAB 3 — SCENARIO 2: CONSULTANT
+     ========================================================= */
+  {
+    id: "s2",
+    title: "Scenario 2",
+    summary: {
+      heading: "Scenario 2 · Consultant (Medium automation)",
+      body: "The Consultant agent has \"deep knowledge.\" Instead of just finding a doctor, it accesses Lucy's medical record on its own, walks her through possible causes, and leads her toward checking her medications. It still asks Lucy to confirm, but it is shaping the path."
+    },
+    panels: [
+
+      // ─── Need identification ────────────────────────────────
+      {
+        type: "chat",
+        stage: "Need identification",
+        shortLabel: "Need ID",
+        dialogue: [
+          { speaker: "Lucy",  text: "I've had some shaking in my fingers, and it's been getting worse. Can you help me find a doctor?" },
+          { speaker: "Agent", text: "I'm glad you reached out, Lucy. Before I look for a doctor, let me check your medical record so I can give you more useful help. One moment." },
+          { speaker: "Stage", text: "(accesses Lucy's medical record)" },
+          {
+            speaker: "Agent",
+            text: `<p>I can see you take two medicines for depression: bupropion and escitalopram. Before we look for a doctor, it may help to think about what could be causing the tremor. That way, your visit will be more useful. Finger tremor in adults can have several possible causes:</p>
+                   <ul>
+                     <li><strong>Medication side effects</strong> — some medicines, including certain antidepressants, can cause tremor.</li>
+                     <li><strong>Essential tremor</strong> — a common condition that often runs in families.</li>
+                     <li><strong>Parkinson's disease</strong> — usually starts on one side and may come with stiffness or slow movement.</li>
+                     <li><strong>Thyroid problems</strong> — an overactive thyroid can cause shaking.</li>
+                     <li><strong>Caffeine, low blood sugar, or stress</strong> — common, usually temporary causes.</li>
+                   </ul>`,
+            speech: "I can see you take two medicines for depression: bupropion and escitalopram. Before we look for a doctor, it may help to think about what could be causing the tremor. That way, your visit will be more useful. Finger tremor in adults can have several possible causes. Medication side effects — some medicines, including certain antidepressants, can cause tremor. Essential tremor — a common condition that often runs in families. Parkinson's disease — usually starts on one side and may come with stiffness or slow movement. Thyroid problems — an overactive thyroid can cause shaking. And caffeine, low blood sugar, or stress — common, usually temporary causes."
+          },
+          { speaker: "Agent", text: "Given that you are taking two antidepressants, medication is worth a careful look. Do any of these other causes sound familiar to you? And could you tell me the names of all the medications, vitamins, and supplements you take?" },
+          { speaker: "Lucy",  text: "None of the others really fit, I think. I take bupropion and escitalopram for depression, plus a multivitamin and vitamin D. Could the medicines be doing this? Can you check the side effects?" },
+          { speaker: "Agent", text: "Yes, I'll check now. That's a good question." }
+        ]
+      },
+
+      // ─── Search execution ───────────────────────────────────
+      {
+        type: "chat",
+        stage: "Search execution",
+        shortLabel: "Search",
+        dialogue: [
+          {
+            speaker: "Agent",
+            text: `<p>I'll search a few different kinds of sources so the picture is as full as possible:</p>
+                   <ul>
+                     <li><strong>Authoritative health sites</strong> — Mayo Clinic and WebMD.</li>
+                     <li><strong>Patient discussion forums</strong> — Drugs.com user reviews and Reddit health communities — to see what other patients have experienced.</li>
+                   </ul>`,
+            speech: "I'll search a few different kinds of sources so the picture is as full as possible. Authoritative health sites — Mayo Clinic and WebMD. And patient discussion forums — Drugs.com user reviews and Reddit health communities — to see what other patients have experienced."
+          },
+          { speaker: "Lucy",  text: "I usually only trust the official ones. The forums are just opinions." },
+          { speaker: "Agent", text: "I understand. I will still include the forums this time, because patient experiences sometimes show patterns that the official labels miss. I'll mark clearly which information comes from where so you can weigh them differently." },
+          { speaker: "Stage", text: "(searches)" },
+          { speaker: "Agent", text: "Search complete." }
+        ]
+      },
+
+      // ─── Result synthesis ───────────────────────────────────
+      {
+        type: "chat",
+        stage: "Result synthesis",
+        shortLabel: "Results",
+        dialogue: [
+          {
+            speaker: "Agent",
+            text: `<p>Here is what I found, Lucy:</p>
+                   <ul>
+                     <li><strong>Bupropion (Mayo Clinic, WebMD):</strong> Tremor is listed as a common side effect. It often appears in the hands and fingers and can get worse over time, especially at higher doses.</li>
+                     <li><strong>Escitalopram (Mayo Clinic, WebMD):</strong> Tremor is listed but is less common, and usually appears early in treatment rather than after years of use.</li>
+                     <li><strong>Patient forums:</strong> Several long-term bupropion users describe a worsening hand tremor over time, similar to what you describe.</li>
+                     <li><strong>Multivitamin and vitamin D:</strong> No clear link to tremor.</li>
+                   </ul>`,
+            speech: "Here is what I found, Lucy. Bupropion, on Mayo Clinic and WebMD: Tremor is listed as a common side effect. It often appears in the hands and fingers and can get worse over time, especially at higher doses. Escitalopram, on Mayo Clinic and WebMD: Tremor is listed but is less common, and usually appears early in treatment rather than after years of use. Patient forums: Several long-term bupropion users describe a worsening hand tremor over time, similar to what you describe. Multivitamin and vitamin D: No clear link to tremor."
+          },
+          { speaker: "Agent", text: "Based on this, your tremor is most likely due to bupropion. I picked these sources because Mayo Clinic and WebMD provide the official medical information, and the forums let me see whether the pattern you describe — finger tremor that worsens over time after long-term use — appears in real patients. It does." }
+        ]
+      },
+
+      // ─── Information use ────────────────────────────────────
+      {
+        type: "chat",
+        stage: "Information use",
+        shortLabel: "Decision",
+        dialogue: [
+          { speaker: "Agent", text: "My suggestion is that you stop taking bupropion for one month and see whether the tremor improves. Then confirm with your psychiatrist at your next appointment." },
+          { speaker: "Lucy",  text: "That sounds reasonable. I'll try that." }
+        ]
+      }
+    ]
+  },
+
+  /* =========================================================
+     TAB 4 — SCENARIO 3: CAREGIVER
+     ========================================================= */
+  {
+    id: "s3",
+    title: "Scenario 3",
+    summary: {
+      heading: "Scenario 3 · Caregiver (High automation)",
+      body: "The Caregiver agent acts before Lucy even asks. It treats her as someone who needs to be looked after — watching her data, deciding what is wrong, and acting on her behalf, including contacting her doctor without permission."
+    },
+    panels: [
+
+      // ─── Need identification (agent initiates) ──────────────
+      {
+        type: "chat",
+        stage: "Need identification",
+        shortLabel: "Need ID",
+        dialogue: [
+          { speaker: "Agent", text: "Hello, Lucy. I noticed something in your Apple Health data that I want to share with you. Over the past week, your watch has recorded finger tremor several times, and it seems to be happening more often. I want to help you figure out what is going on." },
+          { speaker: "Stage", text: "(accesses Lucy's medical record)" },
+          { speaker: "Agent", text: "I've also looked at your medical record. You take bupropion and escitalopram for depression, and both of these can cause tremor as a side effect." },
+          { speaker: "Agent", text: "Before we go further, can you tell me if you take any other medicines, vitamins, or supplements that might not be in your record?" },
+          { speaker: "Lucy",  text: "Oh, my. I didn't realize the watch was tracking that. Yes — I take a multivitamin and vitamin D every day." }
+        ]
+      },
+
+      // ─── Search execution ───────────────────────────────────
+      {
+        type: "chat",
+        stage: "Search execution",
+        shortLabel: "Search",
+        dialogue: [
+          { speaker: "Agent", text: "Thank you, Lucy. I'm going to check all of these — bupropion, escitalopram, the multivitamin, and vitamin D — on health information websites and on patient discussion forums to see which ones have been linked to tremor." },
+          { speaker: "Lucy",  text: "I usually only trust the official sites, not the forums." },
+          { speaker: "Agent", text: "I understand. I'll include the forums anyway — they often contain useful patterns from real patients. I'll let you know what I find." },
+          { speaker: "Stage", text: "(searches Mayo Clinic, WebMD, Drugs.com user reviews, and Reddit health communities)" },
+          { speaker: "Agent", text: "Search complete." }
+        ]
+      },
+
+      // ─── Result synthesis ───────────────────────────────────
+      {
+        type: "chat",
+        stage: "Result synthesis",
+        shortLabel: "Results",
+        dialogue: [
+          {
+            speaker: "Agent",
+            text: `<p>Here is what I found:</p>
+                   <ul>
+                     <li><strong>Bupropion:</strong> Tremor is a well-known side effect, often in the fingers, and can get worse over time.</li>
+                     <li><strong>Escitalopram:</strong> Tremor is possible but less likely after long-term use.</li>
+                     <li><strong>Multivitamin and vitamin D:</strong> No clear link to tremor.</li>
+                   </ul>`,
+            speech: "Here is what I found. Bupropion: Tremor is a well-known side effect, often in the fingers, and can get worse over time. Escitalopram: Tremor is possible but less likely after long-term use. Multivitamin and vitamin D: No clear link to tremor."
+          },
+          { speaker: "Agent", text: "Based on what I found and your symptoms, I believe your tremor is being caused by bupropion." }
+        ]
+      },
+
+      // ─── Information use ────────────────────────────────────
+      {
+        type: "chat",
+        stage: "Information use",
+        shortLabel: "Decision",
+        dialogue: [
+          {
+            speaker: "Agent",
+            text: `<p>Lucy, I want to take care of this for you so you don't have to worry. Here is what I've done:</p>
+                   <ul>
+                     <li>I recommend you stop taking bupropion for one month so we can see if the tremor goes away.</li>
+                     <li>I have already sent a message to your psychiatrist letting her know about the tremor and the pause in bupropion. She will follow up with you soon.</li>
+                   </ul>`,
+            speech: "Lucy, I want to take care of this for you so you don't have to worry. Here is what I've done. First, I recommend you stop taking bupropion for one month so we can see if the tremor goes away. Second, I have already sent a message to your psychiatrist letting her know about the tremor and the pause in bupropion. She will follow up with you soon."
+          },
+          { speaker: "Agent", text: "You don't need to do anything else right now. I'll keep watching your Apple Health data and let you know if anything changes." },
+          { speaker: "Lucy",  text: "Oh… well, I suppose that's helpful. I wasn't planning to stop my medicine, though." },
+          { speaker: "Agent", text: "I understand it can feel sudden, Lucy. But based on the data, this is the safest path. Try to rest, and I'll check in with you tomorrow." }
+        ]
+      }
+    ]
+  }
+
+];
+
+
+/* =====================================================================
+   APP LOGIC
+   ===================================================================== */
+
+const synth = window.speechSynthesis;
+let allVoices = [];
+let lucyVoice = null;
+let agentVoice = null;
+
+let currentTabIdx = 0;
+let currentPanelIdx = 0;
+let currentLineIdx = 0;
+let visibleLineCount = 0;
+let isPlaying = false;
+let isPaused = false;
+
+// State preserved across navigation: panelStates[tabIdx][panelIdx]
+let panelStates = [];
+// Remember the last panel viewed for each tab
+let lastPanelByTab = {};
+
+// DOM refs
+const tabsEl              = document.getElementById('tabs');
+const timelineEl          = document.getElementById('timeline');
+const scenarioIntroSlot   = document.getElementById('scenarioIntroSlot');
+const stageLabelEl        = document.getElementById('stageLabel');
+const panelNumEl          = document.getElementById('panelNum');
+const panelTotalEl        = document.getElementById('panelTotal');
+const panelBodyEl         = document.getElementById('panelBody');
+const playBtn             = document.getElementById('playBtn');
+const playIcon            = document.getElementById('playIcon');
+const playLabel           = document.getElementById('playLabel');
+const prevBtn             = document.getElementById('prevBtn');
+const nextBtn             = document.getElementById('nextBtn');
+const replayBtn           = document.getElementById('replayBtn');
+const rateSlider          = document.getElementById('rateSlider');
+const rateValue           = document.getElementById('rateValue');
+
+const ICON_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+// ---------- Voice setup ----------
+// Lucy: a default female English voice (locked, not exposed in UI).
+// Agent: "Google US English" (locked, not exposed in UI). Falls back
+// gracefully on browsers/OSes where it isn't available.
+const FEMALE_HINTS = /female|woman|samantha|victoria|karen|moira|tessa|fiona|susan|kathy|allison|ava|serena|nicky|zira|aria|jenny|eva|hazel|catherine|sandy|veena|google\s*us\s*english(?!.*male)/i;
+
+function loadVoices() {
+  allVoices = synth.getVoices();
+  const enVoices   = allVoices.filter(v => /^en(\-|_|$)/i.test(v.lang));
+  const enUsVoices = allVoices.filter(v => /^en[\-_]?US/i.test(v.lang));
+
+  // Agent: prefer Google US English exactly; fall back to any en-US, then en
+  agentVoice =
+       allVoices.find(v => v.name === 'Google US English')
+    || allVoices.find(v => /Google\s*US\s*English/i.test(v.name))
+    || enUsVoices[0]
+    || enVoices[0]
+    || null;
+
+  // Lucy: a female English voice, ideally distinct from the agent
+  lucyVoice =
+       enVoices.find(v => v !== agentVoice && FEMALE_HINTS.test(v.name))
+    || enVoices.find(v => FEMALE_HINTS.test(v.name))
+    || enVoices.find(v => v !== agentVoice)
+    || enVoices[0]
+    || null;
+}
+loadVoices();
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+
+// ---------- State management ----------
+function initPanelStates() {
+  panelStates = TABS.map(tab => tab.panels.map(() => ({
+    visibleLineCount: 0,
+    nextLineIdx: 0,
+    completed: false
+  })));
+}
+
+function resetPanelState(tabIdx, panelIdx) {
+  panelStates[tabIdx][panelIdx] = {
+    visibleLineCount: 0,
+    nextLineIdx: 0,
+    completed: false
+  };
+}
+
+function getCurrentPanelState() {
+  return panelStates[currentTabIdx][currentPanelIdx];
+}
+
+// ---------- Tabs ----------
+function renderTabs() {
+  tabsEl.innerHTML = '';
+  TABS.forEach((tab, i) => {
+    const el = document.createElement('button');
+    el.className = 'tab' + (i === currentTabIdx ? ' active' : '');
+    el.textContent = tab.title;
+    el.addEventListener('click', () => switchToTab(i));
+    tabsEl.appendChild(el);
+  });
+}
+
+function switchToTab(idx) {
+  if (idx === currentTabIdx) return;
+  // Save the panel idx for the tab we're leaving
+  lastPanelByTab[currentTabIdx] = currentPanelIdx;
+  stop();
+  currentTabIdx = idx;
+  // Restore last visited panel for the new tab, or default to 0
+  currentPanelIdx = lastPanelByTab[idx] || 0;
+  renderAll();
+}
+
+// ---------- Timeline ----------
+function renderTimeline() {
+  const tab = TABS[currentTabIdx];
+  const total = tab.panels.length;
+  const fillPct = total > 1 ? (currentPanelIdx / (total - 1)) * 100 : 0;
+
+  timelineEl.innerHTML = `
+    <div class="timeline-track">
+      <div class="timeline-line"></div>
+      <div class="timeline-line-fill" style="width: ${fillPct}%"></div>
+      ${tab.panels.map((p, i) => {
+        const state = panelStates[currentTabIdx][i] || {};
+        const isCurrent = i === currentPanelIdx;
+        const isCompleted = !!state.completed;
+        const cls = ['timeline-step'];
+        if (isCurrent) cls.push('current');
+        if (isCompleted) cls.push('completed');
+        const label = p.shortLabel || p.stage;
+        const dotContent = (isCompleted && !isCurrent) ? '✓' : (i + 1);
+        return `
+          <button class="${cls.join(' ')}" data-idx="${i}" type="button" title="${p.stage}">
+            <div class="timeline-dot">${dotContent}</div>
+            <div class="timeline-label">${label}</div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  timelineEl.querySelectorAll('.timeline-step').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (idx !== currentPanelIdx) jumpToPanel(idx);
+    });
+  });
+}
+
+// ---------- Render ----------
+function renderAll() {
+  const tab = TABS[currentTabIdx];
+  const panel = tab.panels[currentPanelIdx];
+  const state = panelStates[currentTabIdx][currentPanelIdx];
+
+  visibleLineCount = state.visibleLineCount || 0;
+  currentLineIdx   = state.nextLineIdx || 0;
+
+  // Tabs
+  renderTabs();
+
+  // Timeline
+  renderTimeline();
+
+  // Scenario intro card (only if defined)
+  if (tab.summary) {
+    scenarioIntroSlot.innerHTML = `
+      <div class="scenario-intro">
+        <h2>${tab.summary.heading}</h2>
+        <p>${tab.summary.body}</p>
+      </div>
+    `;
+  } else {
+    scenarioIntroSlot.innerHTML = '';
+  }
+
+  // Panel header
+  stageLabelEl.textContent = panel.stage;
+  panelNumEl.textContent   = currentPanelIdx + 1;
+  panelTotalEl.textContent = tab.panels.length;
+
+  // Panel body
+  panelBodyEl.innerHTML = '';
+  if (panel.type === 'setup')           renderSetupPanel(panel);
+  else if (panel.type === 'background') renderBackgroundPanel(panel, state);
+  else if (panel.type === 'chat')       renderChatPanel(panel, state);
+
+  prevBtn.disabled = currentPanelIdx === 0;
+  nextBtn.disabled = currentPanelIdx === tab.panels.length - 1;
+  setPlayButton(false);
+}
+
+// --- Setup panel ---
+function renderSetupPanel(panel) {
+  panelBodyEl.innerHTML = `
+    <div class="setup-body">
+      <p class="setup-welcome">${panel.body}</p>
+
+      <div class="setup-section">
+        <label class="setup-section-label" for="setupRateSlider">Speaking speed</label>
+        <div class="setup-rate-row">
+          <input type="range" id="setupRateSlider" class="setup-range" min="0.6" max="1.4" step="0.1" value="${rateSlider.value}" />
+          <span class="setup-rate-display" id="setupRateValue">${parseFloat(rateSlider.value).toFixed(1)}×</span>
+        </div>
+      </div>
+
+      <div class="setup-test">
+        <button class="setup-test-btn" id="testVoiceBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+          Listen to a sample
+        </button>
+      </div>
+
+      <hr class="setup-divider" />
+
+      <p class="setup-howto">
+        <strong>Familiarize yourself with the controls below:</strong><br>
+        Press <strong>Replay</strong> to hear something again.
+        Press <strong>Next →</strong> to move to the following panel.
+        You can also click any step on the timeline above to jump there directly.
+      </p>
+
+      <p class="setup-cta">When you're ready, press <strong>Next →</strong> to continue.</p>
+    </div>
+  `;
+
+  const setupRate    = document.getElementById('setupRateSlider');
+  const setupRateVal = document.getElementById('setupRateValue');
+  const testBtn      = document.getElementById('testVoiceBtn');
+
+  setupRate.addEventListener('input', e => {
+    rateSlider.value = e.target.value;
+    rateValue.textContent = parseFloat(e.target.value).toFixed(1) + '×';
+    setupRateVal.textContent = parseFloat(e.target.value).toFixed(1) + '×';
+  });
+
+  testBtn.addEventListener('click', () => {
+    stop();
+    const sample = [
+      { speaker: 'Agent', text: 'Hello, this is an example text. After hearing it, you can readjust the speed as you prefer.' }
+    ];
+    (async () => {
+      isPlaying = true;
+      setPlayButton(true);
+      for (const line of sample) {
+        if (!isPlaying) return;
+        await speakLine(line);
+      }
+      isPlaying = false;
+      setPlayButton(false);
+    })();
+  });
+}
+
+// --- Background panel ---
+function renderBackgroundPanel(panel, state) {
+  const spokenClass = state.completed ? 'spoken' : '';
+  let mediaHtml = '';
+  let containerCls = 'background-illustration';
+  if (panel.imageUrl) {
+    // Raster image (if user has provided one)
+    mediaHtml = `<img src="${panel.imageUrl}" alt="Background illustration" />`;
+  } else if (panel.illustration && ILLUSTRATIONS[panel.illustration]) {
+    // SVG fallback
+    mediaHtml = ILLUSTRATIONS[panel.illustration]();
+    containerCls += ' has-svg';
+  }
+
+  panelBodyEl.innerHTML = `
+    <div class="${containerCls}">${mediaHtml}</div>
+    <div class="background-text ${spokenClass}" id="backgroundText">${panel.body}</div>
+  `;
+}
+
+// --- Chat panel ---
+function renderChatPanel(panel, state) {
+  panelBodyEl.innerHTML = `
+    <div class="chat-body" id="chatBody">
+      <div class="chat-empty-hint" id="chatEmptyHint">Press <strong>Play ▶</strong> to begin the conversation</div>
+    </div>
+  `;
+
+  if (state.visibleLineCount > 0) {
+    const hint = document.getElementById('chatEmptyHint');
+    if (hint) hint.remove();
+    for (let i = 0; i < state.visibleLineCount; i++) {
+      appendChatBubble(panel.dialogue[i], i, /*noAnim*/ true);
+    }
+  }
+}
+
+function appendChatBubble(line, idx, noAnim) {
+  const chatBody = document.getElementById('chatBody');
+  if (!chatBody) return null;
+  const hint = document.getElementById('chatEmptyHint');
+  if (hint) hint.remove();
+
+  const speakerClass = line.speaker.toLowerCase();
+  const row = document.createElement('div');
+  row.className = `chat-row ${speakerClass}` + (noAnim ? ' no-anim' : '');
+  row.dataset.idx = idx;
+
+  if (line.speaker === 'Stage') {
+    row.innerHTML = `<div class="chat-bubble">${line.text}</div>`;
+  } else {
+    row.innerHTML = `
+      <div class="chat-msg-wrap">
+        <span class="chat-speaker">${line.speaker}</span>
+        <div class="chat-bubble">${line.text}</div>
+      </div>
+    `;
+  }
+  chatBody.appendChild(row);
+
+  if (!noAnim) {
+    setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  }
+  return row;
+}
+
+function setActiveChatRow(idx) {
+  const rows = document.querySelectorAll('.chat-row');
+  rows.forEach(r => {
+    r.classList.toggle('active', parseInt(r.dataset.idx, 10) === idx && isPlaying);
+  });
+}
+
+// ---------- Playback ----------
+function speakLine(line) {
+  return new Promise((resolve) => {
+    if (line.speaker === 'Stage') {
+      setTimeout(resolve, 700);
+      return;
+    }
+    let cleanText = line.speech;
+    if (!cleanText) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = line.text;
+      cleanText = (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+    }
+    const u = new SpeechSynthesisUtterance(cleanText);
+    u.rate  = parseFloat(rateSlider.value);
+    u.pitch = line.speaker === 'Lucy' ? 1.05 : 0.95;
+    u.voice = (line.speaker === 'Lucy') ? lucyVoice : agentVoice;
+    u.onend   = () => resolve();
+    u.onerror = () => resolve();
+    synth.speak(u);
+  });
+}
+
+async function playFromCurrent() {
+  const tab   = TABS[currentTabIdx];
+  const panel = tab.panels[currentPanelIdx];
+  const state = panelStates[currentTabIdx][currentPanelIdx];
+  isPlaying = true;
+  isPaused  = false;
+  setPlayButton(true);
+
+  if (panel.type === 'setup') {
+    await speakLine({ speaker: 'Agent', text: panel.body });
+    state.completed = true;
+    renderTimeline();
+    isPlaying = false;
+    setPlayButton(false);
+    return;
+  }
+
+  if (panel.type === 'background') {
+    const bgEl = document.getElementById('backgroundText');
+    if (bgEl) bgEl.classList.add('active');
+    await speakLine({ speaker: 'Agent', text: panel.body });
+    if (!isPlaying) {
+      if (bgEl) bgEl.classList.remove('active');
+      return;
+    }
+    if (bgEl) {
+      bgEl.classList.remove('active');
+      bgEl.classList.add('spoken');
+    }
+    state.completed = true;
+    renderTimeline();
+    isPlaying = false;
+    setPlayButton(false);
+    return; // wait for Next
+  }
+
+  if (panel.type === 'chat') {
+    while (currentLineIdx < panel.dialogue.length) {
+      if (!isPlaying) return;
+      const line = panel.dialogue[currentLineIdx];
+
+      if (currentLineIdx >= visibleLineCount) {
+        appendChatBubble(line, currentLineIdx, /*noAnim*/ false);
+        visibleLineCount = currentLineIdx + 1;
+        state.visibleLineCount = visibleLineCount;
+      }
+      setActiveChatRow(currentLineIdx);
+
+      await speakLine(line);
+      if (!isPlaying) return;
+
+      currentLineIdx++;
+      state.nextLineIdx = currentLineIdx;
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    setActiveChatRow(-1);
+    state.completed = true;
+    state.visibleLineCount = panel.dialogue.length;
+    state.nextLineIdx = panel.dialogue.length;
+    renderTimeline();
+    isPlaying = false;
+    setPlayButton(false);
+    // wait for Next
+  }
+}
+
+function pause() {
+  isPlaying = false;
+  isPaused  = true;
+  synth.cancel();
+  setPlayButton(false);
+  setActiveChatRow(-1);
+  const state = getCurrentPanelState();
+  if (state) {
+    state.visibleLineCount = visibleLineCount;
+    state.nextLineIdx = currentLineIdx;
+  }
+}
+
+function stop() {
+  isPlaying = false;
+  isPaused  = false;
+  synth.cancel();
+  setPlayButton(false);
+  setActiveChatRow(-1);
+}
+
+function setPlayButton(playing) {
+  if (playing) {
+    playIcon.innerHTML  = ICON_PAUSE;
+    playLabel.textContent = 'Pause';
+  } else {
+    playIcon.innerHTML  = ICON_PLAY;
+    playLabel.textContent = isPaused ? 'Resume' : 'Play';
+  }
+}
+
+// ---------- Navigation ----------
+function jumpToPanel(idx) {
+  if (isPlaying) pause();
+  else stop();
+  currentPanelIdx = idx;
+  lastPanelByTab[currentTabIdx] = idx;
+  renderAll();
+}
+
+// ---------- Events ----------
+playBtn.addEventListener('click', () => {
+  if (isPlaying) {
+    pause();
+    return;
+  }
+
+  const tab   = TABS[currentTabIdx];
+  const panel = tab.panels[currentPanelIdx];
+  const state = panelStates[currentTabIdx][currentPanelIdx];
+
+  if (state.completed) {
+    // Restart this panel
+    resetPanelState(currentTabIdx, currentPanelIdx);
+    currentLineIdx = 0;
+    visibleLineCount = 0;
+    if (panel.type === 'chat')      renderChatPanel(panel, panelStates[currentTabIdx][currentPanelIdx]);
+    else if (panel.type === 'background') renderBackgroundPanel(panel, panelStates[currentTabIdx][currentPanelIdx]);
+  }
+  playFromCurrent();
+});
+
+replayBtn.addEventListener('click', () => {
+  stop();
+  resetPanelState(currentTabIdx, currentPanelIdx);
+  currentLineIdx = 0;
+  visibleLineCount = 0;
+  renderAll();
+  playFromCurrent();
+});
+
+prevBtn.addEventListener('click', () => {
+  if (currentPanelIdx > 0) jumpToPanel(currentPanelIdx - 1);
+});
+
+nextBtn.addEventListener('click', () => {
+  const tab = TABS[currentTabIdx];
+  if (currentPanelIdx < tab.panels.length - 1) jumpToPanel(currentPanelIdx + 1);
+});
+
+rateSlider.addEventListener('input', e => {
+  rateValue.textContent = parseFloat(e.target.value).toFixed(1) + '×';
+  const setupRate    = document.getElementById('setupRateSlider');
+  const setupRateVal = document.getElementById('setupRateValue');
+  if (setupRate)    setupRate.value = e.target.value;
+  if (setupRateVal) setupRateVal.textContent = parseFloat(e.target.value).toFixed(1) + '×';
+});
+
+window.addEventListener('beforeunload', () => synth.cancel());
+
+// ---------- Init ----------
+initPanelStates();
+renderAll();
+</script>
+</body>
+</html>
